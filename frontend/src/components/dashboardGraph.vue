@@ -10,44 +10,20 @@
 </template>
 
 <script>
-import { ref } from "vue";
 import Chart from "primevue/chart";
-
-function getRandomInt(min, max) {
-  min = Math.ceil(min);
-  max = Math.floor(max);
-  return Math.floor(Math.random() * (max - min) + min);
-}
 
 export default {
   name: "App",
   components: {
     Chart,
   },
-  created() {
-    setInterval(() => {
-      this.addData();
-    }, 1000);
-  },
   setup() {
-    const primeChart = ref();
-
-    let limit = 60;
-    const addData = () => {
-      const chart = primeChart.value.chart;
-      chart.data.labels.push((limit += 10));
-      chart.data.datasets[0].data.push(getRandomInt(0, 100));
-      chart.update();
-    };
-
     return {
-      primeChart,
-      addData,
       basicData: {
         labels: ["0", "10", "20", "30", "40", "50", "60"],
         datasets: [
           {
-            label: "Speed",
+            label: "Aggregation of market price",
             data: [65, 59, 80, 81, 56, 55, 40],
             fill: false,
             borderColor: "#42A5F5",

@@ -1,13 +1,13 @@
 <template>
   <div>
     <Toast />
-    <div class="card p-shadow-3 p-mt-3" style="height: 500px">
+    <div class="card p-shadow-3 p-mt-3">
       <DataTable
         :value="newsOutlets"
         :scrollable="true"
         :lazy="true"
         scrollHeight="flex"
-        style="calc(100vh - 800px)"
+        style="calc(100vh - 700px)"
         v-model:selection="selectedNews"
         data-key="title"
         :metaKeySelection="false"

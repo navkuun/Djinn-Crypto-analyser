@@ -1,5 +1,6 @@
 <template>
   <div>
+    <Toast />
     <img
       src="../assets/Djinn.png"
       alt="Tmua trainer"
@@ -10,7 +11,7 @@
       <Card id="login-card" class="p-shadow-4">
         <template #title id="card-title-signup"> Sign up </template>
         <template #subtitle id="card-subtitle-signup">
-          Meet your mathematical potential
+          The top cryptocurrency analyser
         </template>
         <template #content>
           <form class="p-fluid p-m-1" @submit.prevent="login">
@@ -58,29 +59,22 @@
               <Label id="emailLabel" for="email">Email</Label>
             </span>
             <br />
-
+            <Checkbox
+              class="p-mx-0"
+              name="tc"
+              v-model="tc"
+              value="tc"
+              required
+            />
+            <label for="tc" class="p-mb-0">
+              I agree to the terms & conditions
+            </label>
             <Button
-              class="p-button-info p-button-rounded"
+              class="p-button-rounded p-mt-3"
               label="Sign up "
               type="submit"
               @click="register"
               id="submit"
-            >
-            </Button>
-            <Divider
-              align="center"
-              class="p-p-0"
-              style="margin: 0; margin-bottom: 12px"
-            >
-              or
-            </Divider>
-            <Button
-              label="Sign up with Google"
-              @click="goToPage('register')"
-              class="p-button-rounded"
-              icon="pi pi-google"
-              id="register"
-              disabled
             >
             </Button>
           </form>
@@ -118,6 +112,7 @@ import axios from "axios";
 export default {
   data() {
     return {
+      tc: false,
       formRegister: {
         username: null,
         password: null,
@@ -154,27 +149,51 @@ export default {
     },
     async register() {
       const newUser = {
-        username: this.formRegister.username,
+        username: this.formRegister.email,
         password: this.formRegister.password,
-        email: this.formRegister.email,
-        roles: ["user"],
       };
+      let re =
+        /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+      if (!re.test(newUser.username)) {
+        this.$toast.add({
+          severity: "warn",
+          summary: "Invalid email! ",
+        });
+        return;
+      }
+      if (!isNaN(newUser.password)) {
+        this.$toast.add({
+          severity: "warn",
+          summary: "Password cannot contain only numbers",
+        });
+        return;
+      }
+      if (newUser.password.length < 6) {
+        this.$toast.add({
+          severity: "warn",
+          summary: "The length of the password must not be less than 6",
+        });
+        return;
+      }
       console.log(newUser);
       await axios
-        .post(`http://localhost:8081/api/auth/signup`, newUser, {
-          withCredentials: true,
-        })
+        .post(`http://localhost:5000/api/register`, newUser)
         .then((res) => {
           console.log(res);
-
-          this.$router.push("/home");
+          this.$cookies.set("jwt", res.data.access_token);
+          this.$store.commit("logIn", res.data);
+          this.$router.push("/dashboard");
         })
         .catch((err) => {
           if (err.response.status === 400) {
-            this.errors = err.response.data.message;
+            this.errors = err.response.data.msg;
           } else {
-            this.errors =
-              "Something went wrong...did you put in the correct info?";
+            this.$toast.add({
+              severity: "error",
+              detail: err.response.data.msg,
+              summary: "Something went wrong...try again",
+              life: 2000,
+            });
           }
         });
     },

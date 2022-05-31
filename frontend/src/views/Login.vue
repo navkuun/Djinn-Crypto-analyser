@@ -51,30 +51,6 @@
               id="submit"
             >
             </Button>
-            <Divider
-              align="center"
-              class="p-p-0 p-mt-2"
-              style="margin: 0; margin-bottom: 12px"
-            >
-              or
-            </Divider>
-            <Button
-              label="Sign in with Google"
-              @click="goToPage('register')"
-              class="p-button-rounded"
-              style="margin-bottom: 0 !important"
-              icon="pi pi-google"
-              id="register"
-              disabled
-            >
-            </Button>
-            <!-- <Button
-        @click="goToPage('')"
-        label="Home"
-        icon="pi pi-home"
-        iconPos="left"
-      >
-      </Button> -->
             <p>
               <i style="color: red"> {{ errors }} </i>
             </p>
@@ -98,7 +74,7 @@
 </template>
 
 <script scoped>
-// import axios from "axios";
+import axios from "axios";
 const { ipcRenderer } = require("electron");
 export default {
   name: "Login",
@@ -120,10 +96,10 @@ export default {
     },
     async login() {
       const user = {
-        email: this.formLogin.email,
+        username: this.formLogin.email,
         password: this.formLogin.password,
       };
-      if (user.email === "admin@gmail.com" && user.password === "admin123") {
+      if (user.username === "admin@gmail.com" && user.password === "admin123") {
         this.$toast.add({
           severity: "success",
           summary: "You have logged in!",
@@ -131,33 +107,28 @@ export default {
         this.$cookies.set("jwt", "adminjwt");
         // this.$store.commit("logIn",);
         this.$router.push("/dashboard");
-      } else {
-        this.$toast.add({
-          severity: "error",
-          summary: "Something went wrong...try again",
-        });
-        this.errors = "Wrong login information";
+        return;
       }
-      //   await axios
-      //     .post(`http://localhost:8081/api/auth/signin`, user, {
-      //       withCredentials: true,
-      //     })
-      //     .then((res) => {
-      //       this.$cookies.set("jwt", res.data.token);
-      //       //   this.$store.commit("logIn", res.data);
-      //       this.$router.push("/dashboard");
-      //     })
-      //     .catch((err) => {
-      //       if (err.response.status === 400) {
-      //         this.errors = err.response.data.message;
-      //       } else {
-      //         this.$toast.add({
-      //           severity: "error",
-      //           detail: err.response.data.message,
-      //           summary: "Something went wrong...try again",
-      //         });
-      //       }
-      //     });
+      await axios
+        .post(`http://localhost:5000/api/login`, user)
+        .then((res) => {
+          console.log(res);
+          this.$cookies.set("jwt", res.data.access_token);
+          this.$store.commit("logIn", res.data);
+          this.$router.push("/dashboard");
+        })
+        .catch((err) => {
+          if (err.response.status === 400) {
+            this.errors = err.response.data.msg;
+          } else {
+            this.$toast.add({
+              severity: "error",
+              detail: err.response.data.msg,
+              summary: "Something went wrong...try again",
+              life: 2000,
+            });
+          }
+        });
     },
   },
 };

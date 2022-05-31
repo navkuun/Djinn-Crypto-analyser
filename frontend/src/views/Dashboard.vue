@@ -1,5 +1,6 @@
 <template>
   <div style="color: white" class="animate__animated animate__slideInDown">
+    <preloader />
     <Menubar :model="items" id="navbar" class="p-shadow-6">
       <template #start>
         <img class="p-m-0 p-p-0" src="../assets/Djinn.png" height="50" />
@@ -12,13 +13,13 @@
       </template> -->
     </Menubar>
     <div class="p-grid">
-      <div class="p-col-6">
+      <div class="p-col-12 p-lg-6" id="dash_graph">
         <!-- <div class="box">graph</div> -->
         <dashboard-graph> </dashboard-graph>
       </div>
-      <div class="p-col-6">
+      <div class="p-col-12 p-lg-6">
         <!-- MAIN FORM  -->
-        <Steps :model="stepItems" class="p-mt-2" :readonly="true" />
+        <!-- <Step  s :model="stepItems" class="p-mt-2" :readonly="true" /> -->
         <div
           id="mainform"
           style="background-color: black"
@@ -88,18 +89,18 @@
           <crypto-outlet-news> </crypto-outlet-news>
         </div>
       </div>
+
       <div class="p-col-6">
         <div class="p-grid">
-          <div class="p-col-6">
+          <div class="p-col-12 p-lg-6">
             <market-status-card />
           </div>
-          <div class="p-col-6">
+          <div class="p-col-12 p-lg-6">
             <top-reddit-servers />
           </div>
         </div>
       </div>
-      <div class="p-col-6">
-        <!-- <div class="box">Twitter news</div> -->
+      <div class="p-col-12 p-lg-6">
         <twitter-news />
       </div>
     </div>
@@ -108,7 +109,8 @@
       header="Submit Criteria"
       v-model:visible="displaySubmit"
       class="p-fluid"
-      maximizable="true"
+      style="width: 100rem"
+      :modal="true"
     >
       <!-- Place select buttons for options here -->
       <!-- In the future these options will be gotten from the db -->
@@ -125,16 +127,34 @@
           required
         />
         <Divider />
+        <Label> Number of posts to query: </Label>
+        <Dropdown
+          v-model="selectedCriteria2"
+          :options="NumberPosts"
+          optionLabel="name"
+          optionValue="name"
+          placeholder="Select number of data to query, large values = long time"
+          required
+        />
+        <Divider />
+        <Divider />
+        <p v-show="loadingSubmit">
+          Time taken: {{ timeM }}m {{ timeS }}s, usually takes 1-2 minutes so
+          please wait
+        </p>
         <span class="p-buttonset">
           <Button
             label="Cancel"
             icon="pi pi-times"
+            style="width: 30%"
             class="p-button-danger"
             @click="displaySubmit = false"
           />
           <Button
             label="Submit"
             type="submit"
+            style="width: 70%"
+            :loading="loadingSubmit"
             icon="pi pi-times"
             class="p-button-primary p-button-raised"
           />
@@ -148,13 +168,17 @@
 import TwitterNews from "../components/TwitterNews.vue";
 import MarketStatusCard from "../components/MarketStatusCard.vue";
 import TopRedditServers from "../components/TopRedditServers.vue";
+import Preloader from "../components/Preloader.vue";
 // @ is an alias to /src
 const { ipcRenderer } = require("electron");
-const axios = require("axios");
+import axios from "axios";
 const { default: DashboardGraph } = require("../components/dashboardGraph.vue");
 const {
   default: CryptoOutletNews,
 } = require("../components/CryptoOutletNews.vue");
+
+import { Timer } from "timer-node";
+
 export default {
   components: {
     DashboardGraph,
@@ -162,6 +186,7 @@ export default {
     TwitterNews,
     MarketStatusCard,
     TopRedditServers,
+    Preloader,
   },
   data() {
     return {
@@ -173,6 +198,17 @@ export default {
       displaySubmit: false,
       selectedTime: null,
       selectedCriteria1: null,
+      selectedCriteria2: null,
+      NumberPosts: [
+        { name: 50 },
+        { name: 100 },
+        { name: 150 },
+        { name: 200 },
+        { name: 250 },
+      ],
+      timeM: 0,
+      timeS: 0,
+      loadingSubmit: false,
       algorithmType: [{ name: "Naive bayes" }, { name: "Logistic regression" }],
       timeRanges: [
         { name: "1 week" },
@@ -223,23 +259,43 @@ export default {
     openSubmitCriteria() {
       this.displaySubmit = true;
     },
-    submitForm() {
+    async submitForm() {
+      const timer = new Timer({ label: "timer-submit" });
+      timer.start();
+      setInterval(() => {
+        this.timeM = timer.time().m;
+        this.timeS = timer.time().s;
+      }, 1000);
+
+      if (this.selectedCriteria1 === null) {
+        this.$toast.add({
+          severity: "error",
+          summary: "You must select some criteria before continuing",
+        });
+      }
+      this.loadingSubmit = true;
+      // Axios request to the cryptocurrency analyser
+      await axios
+        .post("http://localhost:5000/api/analyser-input", {
+          crypto_name: "bitcoin",
+          time_range: "1 week",
+        })
+        .then((res) => {
+          console.log(res);
+          // Stores the result in localstorage to be used later on
+          localStorage.setItem("crypto-data", JSON.stringify(res.data));
+        })
+        .catch((err) => {
+          // If an error occure print to the console
+          console.log(err);
+        });
+      // After result is fetched move onto the results page for visualizations
       this.$router.push("/results-page");
     },
   },
   computed: {},
   created() {
     ipcRenderer.send("resize-window-main", 1600, 900, true, "Dashboard", true);
-  },
-  async mounted() {
-    await axios
-      .get("http://localhost:5000/test")
-      .then((res) => {
-        this.name = res;
-      })
-      .catch(() => {
-        this.name = `sdfdsf`;
-      });
   },
 };
 </script>
@@ -252,11 +308,15 @@ export default {
     }
   }
 }
-
 .layout-content .content-section.implementation > h3 {
   font-weight: 600;
 }
 
+@media (max-width: 800px) {
+  #dash-graph {
+    width: 100%;
+  }
+}
 textarea {
   resize: none;
 }
@@ -264,12 +324,12 @@ textarea {
 //   color: white;
 // }
 #criteriaDialog {
-  width: 100%;
+  width: 100rem;
 }
 
 #navbar {
   height: 79px;
-  background-color: white;
+  // background-color: white;
   margin-top: 0 !important;
 }
 </style>

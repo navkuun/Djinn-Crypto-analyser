@@ -6,10 +6,12 @@ import VueCookies from "vue3-cookies";
 const app = createApp(App).use(store).use(router).use(VueCookies);
 
 import "primeflex/primeflex.css";
-// import "primevue/resources/themes/arya-purple/theme.css";
-import "primevue/resources/themes/saga-blue/theme.css";
+
+import "primevue/resources/themes/tailwind-light/theme.css";
+
 import "primevue/resources/primevue.min.css";
 import "primeicons/primeicons.css";
+
 import Chart from "primevue/chart";
 import PrimeVue from "primevue/config";
 import AutoComplete from "primevue/autocomplete";

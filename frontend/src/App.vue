@@ -98,7 +98,7 @@ export default {
   }
 }
 body {
-  background-color: white;
   color: black;
+  background-color: white;
 }
 </style>

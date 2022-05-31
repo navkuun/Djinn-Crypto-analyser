@@ -1,81 +1,77 @@
-# for some reason this is not importing, so i'm getting error
-from os import access
-from flask import Flask, jsonify, request
+import hashlib
+import datetime
+from flask import Flask, request, jsonify
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from pymongo import MongoClient
 from flask_cors import CORS, cross_origin
-import pymongo
-from flask_jwt_extended import JWTManager, jwt_required, create_access_token
-from flask_pymongo import PyMongo
-import sys
 
-# Initializing flask app
+from routes import crypto_processes
 app = Flask(__name__)
-# configs
-app.config['CORS_HEADERS'] = 'Content-Type'
-app.config["JWT_SECRET_KEY"] = "djinn-secret-key"
-app.config["MONGO_URI"] = "mongodb://localhost:27017/djinn_db"
-
-mongo = PyMongo(app)
-db = mongo.db
-
-
-# CORS(app, support_crednetials=True,   resources={
-#      r"/login/*": {"origins": "http://localhost:8082"}})
-CORS(app)
+app.register_blueprint(crypto_processes)
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 jwt = JWTManager(app)
-try:
-    user = db["User"]
-    print("created user collection", flush=True)
-except:
-    print("Couldn't create user collection", flush=True)
+
+app.config['CORS_HEADERS'] = 'Content-Type'
+app.config['JWT_SECRET_KEY'] = 'djinn_secret_key'
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = datetime.timedelta(days=1)
+
+client = MongoClient("mongodb://localhost:27017/")  # connection string
+db = client["djinn_db"]
+# DB collections
+users_collection = db["users"]
+print("User collection created", flush=True)
+# DB collections
 
 
-@app.route('/test')
-def hello_world():
-    return "Naveed khan"
-
-
-@app.route("/register", methods=["POST", "OPTIONS"])
+@ app.route("/api/register", methods=["POST", "OPTIONS"])
+@cross_origin()
 def register():
-    print(request.json, flush=True)
-    email = request.json["email"]
-    username = request.json["username"]
-    verifyEmail = user.find_one({"email": email})
-    verifyUsername = user.find_one({"username": username})
-
-    if verifyEmail:
-        return jsonify(message="Email already exists!"), 409
-    elif verifyUsername:
-        return jsonify(message="Username already exists!"), 409
+    # creates a new user
+    new_user = request.get_json()  # store the json body request
+    new_user["password"] = hashlib.sha256(
+        new_user["password"].encode("utf-8")).hexdigest()  # encrpt password
+    doc = users_collection.find_one(
+        {"username": new_user["username"]})  # check if user exist
+    if not doc:
+        users_collection.insert_one(new_user)
+        return jsonify({'msg': 'User created successfully'}), 201
     else:
-        password = request.json["password"]
-        user_info = dict(email=email, password=password, username=username)
-        user.insert_one(user_info)
-        return jsonify(message="user added successfully"), 201
+        return jsonify({'msg': 'Username already exists'}), 409
 
 
-@app.route("/login", methods=["POST", "OPTIONS"])
+@ app.route("/api/login", methods=["POST", "OPTIONS"])
+@cross_origin()
 def login():
-    print(request, flush=True)
-    email = request.json["email"]
-    password = request.json["password"]
+    # returns a jwt key for the user logging in to use and does some verification
+    print(request.get_json(), flush=True)
+    login_details = request.get_json()  # store the json body request
+    user_from_db = users_collection.find_one(
+        {'username': login_details['username']})  # search for user in database
 
-    check_user = user.find_one({"email": email, "password": password})
-    if check_user:
-        access_token = create_access_token(identity=email)
-        return jsonify(message="Login Succeeded!", access_token=access_token), 201
+    if user_from_db:
+        encrpted_password = hashlib.sha256(
+            login_details['password'].encode("utf-8")).hexdigest()
+        if encrpted_password == user_from_db['password']:
+            access_token = create_access_token(
+                identity=user_from_db['username'])  # create jwt token
+            return jsonify(access_token=access_token), 200
+
+    return jsonify({'msg': 'The username or password is incorrect'}), 401
+
+
+@ app.route("/api/user", methods=["GET"])
+@ jwt_required
+def profile():
+    current_user = get_jwt_identity()  # Get the identity of the current user
+    user_from_db = users_collection.find_one({'username': current_user})
+    if user_from_db:
+        # delete data we don't want to return
+        del user_from_db['_id'], user_from_db['password']
+        return jsonify({'profile': user_from_db}), 200
     else:
-        return jsonify(message="Incorrect email or password!"), 401
-
-
-app.route("/dashboard")
-
-
-@jwt_required
-def dashboard():
-    return jsonify(message="Welcome to djinn!")
+        return jsonify({'msg': 'Profile not found'}), 404
 
 
 if __name__ == '__main__':
-    # same as electron server
-    app.run(host='localhost', debug=True)
+    app.run(debug=True)

@@ -8,7 +8,7 @@
         :lazy="true"
         scrollHeight="flex"
         style="calc(100vh - 800px)"
-        v-model:selection="selectedNews"
+        :selection="selectedNews"
         data-key="title"
         :metaKeySelection="false"
         height="400"
@@ -43,10 +43,38 @@ export default {
       newsOutlets: [
         {
           title: "Crypto to the moon!",
-          source: "washington post",
-          rating: "3",
+          source: "washington_post",
+          rating: "2",
           sentiment: "0.5",
           trustworth: "7",
+        },
+        {
+          title: "Elon buys twitter",
+          source: "washington post",
+          rating: "4",
+          sentiment: "0.8",
+          trustworth: "5",
+        },
+        {
+          title: "Elon buys twitter",
+          source: "washington post",
+          rating: "4",
+          sentiment: "0.8",
+          trustworth: "5",
+        },
+        {
+          title: "Elon buys twitter",
+          source: "washington post",
+          rating: "4",
+          sentiment: "0.8",
+          trustworth: "5",
+        },
+        {
+          title: "Elon buys twitter",
+          source: "washington post",
+          rating: "4",
+          sentiment: "0.8",
+          trustworth: "5",
         },
       ],
     };

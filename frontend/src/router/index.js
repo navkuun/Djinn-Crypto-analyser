@@ -6,7 +6,6 @@ import ResultsPage from "../views/ResultsPage.vue";
 
 const routes = [
   { path: "/dashboard", name: "Dashboard", component: Dashboard },
-
   {
     path: "/",
     name: "Login",
